@@ -1,61 +1,67 @@
 package com.example.demo.pckg1;
 
-
-
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 public class Leader {
-	
+
 	@Id
 	private String ID;
-	
-	@Field 
+
+	@Field
 	private String fullName;
-	
-	@Field 
+
+	@Field
 	private String email;
-	
+
 	@Field
 	private String phoneNumber;
-	
-	@Field 
+
+	@Field
 	private Address address;
-	
-	@Field 
-	private LocalDate DateOfBirth;
-	
-	@Field 
-	private String profilePic; 
-	
-	@Field 
-	private ArrayList<String> categoryIDs;
-	
-	@Field 
+
+	@Field
+	private Date dateOfBirth;
+
+	@Field
+	private String profilePic;
+
+	@Field
+	private ArrayList<String> categoriesIDs = new ArrayList<>();
+
+	@Field
+	private ArrayList<String> coursesIDs = new ArrayList<>();
+
+	@Field
 	private Status activeStatus;
-	
-	@Field 
-	private String activeDate;
+
+	@Field
+	private Date activeDate;
 
 	public Leader() {
 		super();
 	}
 
-	public Leader(String fullName, String email, String phoneNumber, Address address, LocalDate dateOfBirth, String profilePic,
-			ArrayList<String> categoryIDs, Status activeStatus, String activeDate) {
+	public Leader(String fullName, String email, String phoneNumber, Address address, Date dateOfBirth,
+			String profilePic) {
 		super();
 		this.fullName = fullName;
 		this.email = email;
 		this.phoneNumber = phoneNumber;
 		this.address = address;
-		DateOfBirth = dateOfBirth;
+		this.dateOfBirth = dateOfBirth;
 		this.profilePic = profilePic;
-		this.categoryIDs = categoryIDs;
-		this.activeStatus = activeStatus;
-		this.activeDate = activeDate;
+	}
+
+	public String getID() {
+		return ID;
+	}
+
+	public void setID(String iD) {
+		ID = iD;
 	}
 
 	public String getFullName() {
@@ -90,44 +96,36 @@ public class Leader {
 		this.address = address;
 	}
 
-	public LocalDate getDate() {
-		return DateOfBirth;
+	public Date getDateOfBirth() {
+		return dateOfBirth;
 	}
 
-	public void setDate(LocalDate dateOfBirth) {
-		DateOfBirth = dateOfBirth;
+	public void setDateOfBirth(Date dateOfBirth) {
+		this.dateOfBirth = dateOfBirth;
 	}
 
 	public String getProfilePic() {
 		return profilePic;
 	}
 
-	public String getID() {
-		return ID;
-	}
-
-	public void setID(String iD) {
-		ID = iD;
-	}
-
-	public LocalDate getDateOfBirth() {
-		return DateOfBirth;
-	}
-
-	public void setDateOfBirth(LocalDate dateOfBirth) {
-		DateOfBirth = dateOfBirth;
-	}
-
 	public void setProfilePic(String profilePic) {
 		this.profilePic = profilePic;
 	}
 
-	public ArrayList<String> getCategoryIDs() {
-		return categoryIDs;
+	public ArrayList<String> getCategoriesIDs() {
+		return categoriesIDs;
 	}
 
-	public void setCategoryIDs(ArrayList<String> categoryIDs) {
-		this.categoryIDs = categoryIDs;
+	public void setCategoriesIDs(ArrayList<String> categoriesIDs) {
+		this.categoriesIDs = categoriesIDs;
+	}
+
+	public ArrayList<String> getCoursesIDs() {
+		return coursesIDs;
+	}
+
+	public void setCoursesIDs(ArrayList<String> coursesIDs) {
+		this.coursesIDs = coursesIDs;
 	}
 
 	public Status getActiveStatus() {
@@ -138,20 +136,19 @@ public class Leader {
 		this.activeStatus = activeStatus;
 	}
 
-	public String getActiveDate() {
+	public Date getActiveDate() {
 		return activeDate;
 	}
 
-	public void setActiveDate(String activeDate) {
+	public void setActiveDate(Date activeDate) {
 		this.activeDate = activeDate;
 	}
 
 	@Override
 	public String toString() {
 		return "Leader [ID=" + ID + ", fullName=" + fullName + ", email=" + email + ", phoneNumber=" + phoneNumber
-				+ ", address=" + address + ", activeStatus=" + activeStatus + ", activeDate=" + activeDate + "]";
+				+ ", address=" + address + ", dateOfBirth=" + dateOfBirth + ", profilePic=" + profilePic
+				+ ", categoriesIDs=" + categoriesIDs + ", coursesIDs=" + coursesIDs + ", activeStatus=" + activeStatus
+				+ ", activeDate=" + activeDate + "]";
 	}
-
-
-	
 }

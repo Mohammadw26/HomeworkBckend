@@ -3,6 +3,7 @@ package com.example.demo.pckg1;
 import java.util.Date;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -25,9 +26,9 @@ public class Parent {
 	@Field
 	private String paymentDetails; 
 	@Field
-	private Status active;  
+	private Status status;  
 	@Field
-	private List <String> kids;
+	private List <String> kids= new ArrayList<String>();;
 	//@Field
 	//private List <Bills> bill;
 	@Field
@@ -44,8 +45,7 @@ public class Parent {
 		this.phoneNumber = phoneNumber;
 		this.email = email;
 		this.password = password;
-		active = Status.Active; 
-		this.kids = new ArrayList<>();
+		status = Status.Active; 
 		activeDate = new Date(); 
 	}
 
@@ -136,12 +136,31 @@ public class Parent {
 	public void setActiveDate(Date activeDate) {
 		this.activeDate = activeDate;
 	}
-	public Status getActive () {
-		return active; 
+	public Status getStatus() {
+		return status; 
 	}
 	
-	public void setActive (Status s) {
-		active = s; 
+	public void setStatus (Status s) {
+		status = s; 
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(email, fullName, id, password, phoneNumber);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Parent other = (Parent) obj;
+		return Objects.equals(email, other.email) && Objects.equals(fullName, other.fullName)
+				&& Objects.equals(id, other.id) && Objects.equals(password, other.password)
+				&& Objects.equals(phoneNumber, other.phoneNumber);
 	}
 
 	@Override

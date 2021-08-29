@@ -1,6 +1,10 @@
 package com.example.demo.pckg1;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,43 +20,39 @@ public class Parent_repository {
 	IParentRepository parentRepo;  
 	@Autowired
 	KidRepository kidRepo; 
-	@Autowired
-	CourseRepository courseRepo;
-	
+
+	long DAY_IN_MS = 1000 * 60 * 60 * 24;
 	/**
 	 * Create new Parent
-	 * @param Parent
+	 * @param parent
 	 * @return new Parent or null if the email already exists 
 	 */
-	public Parent addNewParent (Parent parent){
-		Parent p = findUserByEmail (parent.getEmail());
-		if (p != null) {
-			if (!p.getActive().equals(Status.InActive)) {
-				new ResponseEntity<>("Faild to add new parent, The email already exist in the system", 
-						HttpStatus.NOT_ACCEPTABLE);
-				return null;
-			}
-			else {
-				p.setActive(Status.Active);
-				parentRepo.save(p);
-				 new ResponseEntity<>("New parent aded", HttpStatus.OK);
-				 return p; 
-			}
+	
+	public void setActiveDate(String parentId,Date newActiveDate) {
+		Optional<Parent> optional = parentRepo.findById(parentId);
+		if(optional.isPresent()) {
+			System.out.println("Kid Found, now setting course to his studies.");
+			Parent parent = optional.get();
+			parent.setActiveDate(newActiveDate);
+			parentRepo.save(parent);
 		}
-		parent.setActive(Status.Active);
+	}
+	
+	public Parent addNewParent (Parent parent){
+		parent.setStatus(Status.Active);
 		parentRepo.save(parent); 
 		 new ResponseEntity<>("New parent aded", HttpStatus.OK);
 		 return parent;
 	}
 	/**
 	 * Delete Parent - changes the status to not active
-	 * @param Parent
+	 * @param id
 	 * @return List of all parents
 	 */	
 	public List <Parent> deleteParent (String id){
 		Optional<Parent> p = parentRepo.findById(id);
 		if (p.isPresent()) {
-			p.get().setActive(Status.InActive);
+			p.get().setStatus(Status.InActive);
 			parentRepo.save(p.get());	
 			for (String idKid : p.get().getKids()){
 				kidRepo.deleteKid (idKid);
@@ -70,7 +70,7 @@ public class Parent_repository {
 	public List <Parent> getAllActiveparents (){
 		List <Parent> lstParent = new ArrayList<>();
 		for (Parent p : parentRepo.findAll()) {
-			if (p.getActive().equals(Status.Active))
+			if (p.getStatus().equals(Status.Active))
 				lstParent.add(p);
 		}
 		return lstParent;
@@ -103,7 +103,7 @@ public class Parent_repository {
 	
 	/**
 	 * Change email of existent parent
-	 * @param email of parent and the new email
+	 * @param id of parent and the new Email
 	 * @return the parent if found or null 
 	 */	
 	
@@ -137,7 +137,7 @@ public class Parent_repository {
 	
 	/**
 	 * get all kids of specific parent
-	 * @param email
+	 * @param id
 	 * @return List of all kids of the parent if found or null
 	 */	
 	public List<Kid> GetAllKidsOfParent (String id) {
@@ -154,7 +154,7 @@ public class Parent_repository {
 	
 	/**
 	 * get kid 
-	 * @param id of parent, id of kid
+	 * @param parentId of parent, kidId of kid
 	 * @return the kid if found or null
 	 */
 
@@ -167,8 +167,8 @@ public class Parent_repository {
 	}
 	
 	/**
-	 * Change kid’s picture
-	 * @param Id of parent, Id of kid, new picture
+	 * Change kidï¿½s picture
+	 * @param parentId of parent, Id of kid, new picture
 	 * @return the kid with the new picture if found or null 
 	 */	
 	public Kid addProfilePicture (String parentId, String kidId, String picture) {
@@ -181,7 +181,7 @@ public class Parent_repository {
 	
 	/**
 	 * Register kid to course  
-	 * @param id of parent, id of kid, id of course 
+	 * @param parentId of parent, id of kid, id of course
 	 * @return the kid if found or null
 	 */	
 	public Kid addKidToCourse (String parentId, String kidId, String courseId) {
@@ -195,7 +195,7 @@ public class Parent_repository {
 
 	/**
 	 * remove kid from course  
-	 * @param id of parent, id of kid, id of course 
+	 * @param parentId of parent, id of kid, id of course
 	 * @return the kid if found or null
 	 */	
 	public Kid removeKidFromCourse (String parentId, String kidId, String courseId) {
@@ -210,8 +210,8 @@ public class Parent_repository {
 		return null; 
 	}
 	/**
-	 * Delete kid – changes the status to not active   
-	 * @param id of parent, id of kid 
+	 * Delete kid ï¿½ changes the status to not active   
+	 * @param parentId of parent, id of kid
 	 * @return the parent of the kid if found or null
 	 */	
 	public Parent deleteKid (String parentId, String kidId) {
@@ -222,38 +222,23 @@ public class Parent_repository {
 		return parent.get(); 
 	}
 	
-	
-	/***
-	 * 
-	 * @param kidId to get active courses of
-	 * @return list of course's IDs
-	 */
-	public ArrayList<String> getKidActiveCoursesIds(String parentId, String kidId){
-		Optional<Parent> parent = parentRepo.findById(parentId);
-		if (parent.isPresent()) {
-			List <String> lstCourse = kidRepo.getKidActiveCoursesIds(kidId); 
-			return (ArrayList<String>) lstCourse; 
-	}
-		System.out.println("Couldn't Find A KId With ID: "+ kidId);
-		return null;
-	}
-	
 	/**
 	 * get all active (future) courses of kid   
-	 * @param id of parent, id of kid 
+	 * @param parentId of parent, id of kid
 	 * @return list of all active courses of kid or null if not found 
 	 */	
-	public List<Course> getKidActiveCourses(String parentId, String kidId){
+	public ArrayList<Course> getKidActiveCourses (String parentId, String kidId){
 	 	Optional<Parent> parent = parentRepo.findById(parentId);
 		if (parent.isPresent()) {
-			List <Course> lstCourse = kidRepo.getKidActiveCourses(kidId); 
+			ArrayList<Course> lstCourse = kidRepo.getKidActiveCourses(kidId); 
 			return lstCourse; 
 	}
-		return null;
+		return null; 
+
 	}
 	/**
 	 * get all completed courses of kid   
-	 * @param id of parent, id of kid 
+	 * @param parentId of parent, id of kid
 	 * @return list of all completed courses of kid or null if not found 
 	 */	
 	 public List<String> getKidCompletedCourses (String parentId, String kidId){
@@ -279,19 +264,74 @@ public class Parent_repository {
 		return null; 
 	}
 	
+	/**	
+ * get all the courses that the kid is not currently participate in(active courses), for a specific category    	
+ * @param id of parent, id of kid , id of category	
+ * @return list of all courses in category that the kid is registered to(not active courses)	
+ */	
+public List<Course> getKidNotRegisteredCoursesByCategory(String parentId, String kidId, String catId){	
+	Optional<Parent> parent = parentRepo.findById(parentId);	
+	if (parent.isPresent()) {	
+	return kidRepo.getKidNotRegisteredCoursesByCategory(kidId, catId);
+	}
+	return null;
+}
 	/**
-	 * get all the courses that the kid is not currently participate in(active courses), for a specific category    
-	 * @param id of parent, id of kid , id of category
-	 * @return list of all courses in category that the kid is registered to(not active courses)
+     * get all the categories that the kid is not currently participate in(active courses)    
+     * @param id of parent, id of kid , id of category
+     *  @return list of all categories that the kid is registered to(not active courses)
+     */
+    public List<Category> getKidNotRegisteredCategories(String parentId, String kidId){
+        Optional<Parent> parent = parentRepo.findById(parentId);
+        if (parent.isPresent()) {
+            return kidRepo.getKidNotRegisteredCategories(kidId);
+        }
+        return null; 
+    }
+	
+	/**
+	 * 
+	 * @param period Input: 1- For week 2- For month 3- For year.
+	 * @return hashMap : with two keys: "New Parents": new parents Count, "totalParents": total Parents count, null otherwise 
 	 */
-	public List<Course> getKidNotRegisteredCoursesByCategory(String parentId, String kidId, String catId){
-		Optional<Parent> parent = parentRepo.findById(parentId);
-		if (parent.isPresent()) {
-		return kidRepo.getKidNotRegisteredCoursesByCategory(kidId, catId);
+	public HashMap<String, Integer> getNewParents(int period){
+		if(period != 1 && period !=2 && period !=3) {
+			new ResponseEntity<>("Input: 1- For week 2- For month 3- For year.", HttpStatus.NOT_ACCEPTABLE);
+			return null;
 		}
-		return null; 
+		Date d;
+		if(period == 1) {
+			d = new Date((new Date()).getTime()- 7*DAY_IN_MS);
+		}else if(period == 2) {
+			d = new Date((new Date()).getTime()-35*DAY_IN_MS);
+		}
+		else {
+			d = new Date((new Date()).getTime()- 365*DAY_IN_MS);
+		}
+		List<Parent> parents = parentRepo.findAll();
+		if(parents.size()<1) {
+			System.out.println("No PARENTS IN DATABASE MAN!!!");
+			return null;
+		}
+		int parentsCount = 0;
+		int totalParents = 0;
+		for( Parent p : parents) {
+			if(p.getStatus()!=null) {
+			if(p.getStatus().equals(Status.Active)) {
+				totalParents ++;
+				if(p.getActiveDate()!=null) {
+				if(p.getActiveDate().after(d)) {
+					parentsCount++;
+				}
+				}
+			}
+			}
+		}
+	HashMap<String, Integer> toReturn = new HashMap<String, Integer>();
+	toReturn.put("New Parents", parentsCount);
+	toReturn.put("totalParents",totalParents );
+		return toReturn;
 	}
 
-	
 
 }

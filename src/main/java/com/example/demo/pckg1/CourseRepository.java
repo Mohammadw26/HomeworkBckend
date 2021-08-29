@@ -1,12 +1,9 @@
 package com.example.demo.pckg1;
 
-
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -14,44 +11,72 @@ import java.util.Date;
 
 @Repository
 public class CourseRepository {
+	
 	@Autowired
 	ICourseRepository CourseRepository;
+	
 	@Autowired
 	IMeetingRepository meetingRepository;
+	
 	@Autowired
 	ICategoryRepository categoryRepository;
 
-	/**
-	 * 
-	 * @param name
-	 * @return
-	 */
-	private boolean findCourseByName(String name) {
-		for (Course c : CourseRepository.findAll()) {
-			if (c.getName().equals(name)) {
-				return true;
-			}
-		}
-		return false;
-	}
+	@Autowired
+	ILeaderRepository leaderRepository;
+
 
 	/**
-   	 * Adds a new course
-   	 * @param Course
-   	 * @return All Course
-   	 */
-	public List<Course> addANewCourse(Course course, String categoryID) {
-		Optional<Category> courseCategory = categoryRepository.findById(categoryID);
-		if(courseCategory.isPresent()) {
-			for(Course c: CourseRepository.findAll()) {
+	 * Find a course by ID
+	 * 
+	 * @param Course ID
+	 * @return Course
+	 */	
+	public Course findCourseByID(String courseID) {
+		return CourseRepository.findById(courseID).get();
+	}
+	
+	/**
+	 * Adds a new course, and returns all courses
+	 * 
+	 * @param Course
+	 * @return All Courses
+	 */
+	public List<Course> addANewCourse(Course course) {
+		Optional<Category> coursecategory = categoryRepository.findById(course.getCategoryId());
+		if (coursecategory.isPresent()) {
+			for (Course c : CourseRepository.findAll()) {
 				if (c.getName().equals(course.getName()))
-						return CourseRepository.findAll();
+					return CourseRepository.findAll();
 			}
-			course.setCategoryId(categoryID);
 			CourseRepository.save(course);
 		}
+		
 		return CourseRepository.findAll();
-			
+	}
+	
+	public ArrayList<String> getCourseLeadersByName(String courseName) {
+		Course course = getASpecificCourseByName(courseName);
+		if ( course!= null)
+			return course.getLeadersIDs();
+		return null;
+	}
+	/**
+	 * Adds a new course, and returns it
+	 * 
+	 * @param course
+	 * @return course
+	 */
+	public Course addNewCourse(Course course) {
+//		Optional<Category> coursecategory = categoryRepository.findById(course.getCategoryId());
+//		if (coursecategory.isPresent()) {
+//			for (Course c : CourseRepository.findAll()) {
+//				if (c.getName().equals(course.getName()))
+//					return c;
+//			}
+//			CourseRepository.save(course);
+//		}
+		CourseRepository.save(course);
+		return course;
 	}
 
 	/**
@@ -73,8 +98,6 @@ public class CourseRepository {
 		Optional<Course> course = CourseRepository.findById(ID);
 		if (course.isPresent())
 			return course.get();
-		;
-		new ResponseEntity<>("Course not found", HttpStatus.NOT_ACCEPTABLE);
 		return null;
 	}
 
@@ -84,25 +107,20 @@ public class CourseRepository {
 	 * @param Course ID
 	 * @return Returns course category if the course was found, null otherwise
 	 */
-	@SuppressWarnings("unlikely-arg-type")
 	public Category getCourseCategory(String courseID) {
 		Optional<Course> course = CourseRepository.findById(courseID);
 		if (course.isPresent()) {
 			String categoryID = course.get().getCategoryId();
-			Optional<Category> courseCategory = categoryRepository.findById(categoryID);
-			if (courseCategory.isPresent()) {
 				for (Category c : categoryRepository.findAll()) {
-					if (c.equals(courseCategory))
+					if (c.getId().equals(categoryID))
 						return c;
 				}
 			}
-		}
-		;
 		return null;
 	}
 
 	/**
-	 * Returns a specific course's leader
+	 * Returns a specific course's leaders
 	 * 
 	 * @param Course ID
 	 * @return returns a course's leader if the course exists
@@ -118,7 +136,7 @@ public class CourseRepository {
 	 * Adds a leader to a course
 	 * 
 	 * @param Course ID, Leader ID
-	 * @return returns true if the leader was added successfully , false otherwise.
+	 * @return returns true if the leader was added successfully, false otherwise.
 	 */
 	public Boolean addLeaderToCourse(String courseID, String leaderID) {
 		Optional<Course> course = CourseRepository.findById(courseID);
@@ -133,6 +151,26 @@ public class CourseRepository {
 		return false;
 	}
 
+
+	/** Removes a leader from a course
+	 * @param courseID, Leader ID
+	 * @return returns true if the leader was added successfully , false otherwise.
+	 */
+	public Boolean removeLeaderCourse(String courseID, String leaderID) {
+		Optional<Course> course = CourseRepository.findById(courseID);
+		Optional<Leader> leader = leaderRepository.findById(leaderID);
+
+		if(course.isPresent() && leader.isPresent())
+			if((course.get().getLeadersIDs().contains(leaderID))&&
+					(leader.get().getCoursesIDs().contains(courseID)))
+				if(course.get().getLeadersIDs().remove(leaderID)&&
+						leader.get().getCoursesIDs().remove(courseID)) {
+					leaderRepository.save(leader.get());
+					CourseRepository.save(course.get());
+					return true;
+				}
+		return false;
+	}
 	/**
 	 * Returns a specific course's kids
 	 * 
@@ -150,7 +188,7 @@ public class CourseRepository {
 	 * Adds a kid to a course
 	 * 
 	 * @param Course ID, Kid ID
-	 * @return returns true if the kid was added successfully , false otherwise.
+	 * @return returns true if the kid was added successfully, false otherwise.
 	 */
 	public boolean addKidToCourse(String courseID, String kidID) {
 		Optional<Course> course = CourseRepository.findById(courseID);
@@ -201,7 +239,7 @@ public class CourseRepository {
 	}
 
 	/**
-	 * Updating a course status after deleting and saving the delete time
+	 * Updating a course status after deleting, then saving the delete time
 	 * 
 	 * @param Course ID
 	 * @return returns true when the course's finish date and status are updated
@@ -212,7 +250,6 @@ public class CourseRepository {
 			Date currentDate = new Date();
 			course.get().setFinishDateTime(currentDate);
 			course.get().setStatus(Status.InActive);
-			// updateCoursetatus(courseID, Status.InActive);
 			CourseRepository.save(course.get());
 			return true;
 		}
@@ -225,48 +262,35 @@ public class CourseRepository {
 	 * @param Category ID
 	 * @return List of Course that belong to the given category
 	 */
-	public ArrayList<Course> getCategoryCourses(String categoryID) {
-		ArrayList<Course> categoryCourses = new ArrayList<Course>();
+	public List<Course> getCategoryCourses(String categName) {
+		List<Course> categoryCourses = new ArrayList<Course>();
 		for (Course c : CourseRepository.findAll())
-			if (c.getCategoryId().equals(categoryID)) {
+			if ((c.getName()).indexOf(categName)==0) {
 				categoryCourses.add(c);
 			}
-
 		return categoryCourses;
 	}
-
+//	public List<Course> getCategoryCourses(String categoryID) {
+//		List<Course> categoryCourses = new ArrayList<Course>();
+//		for (Course c : CourseRepository.findAll())
+//			if ((c.getCategoryId()).equals(categoryID)) {
+//				categoryCourses.add(c);
+//			}
+//		return categoryCourses;
+//	}
+	
 	/**
+	 * Get a course by a course name
 	 * 
-	 * @return Monthly activity percentage: total duration of meetings devide total
-	 *         time of courses in the last 28 days
+	 * @param Course name
+	 * @return Course
 	 */
-	public double getMonthlyActivity() {
-		int totalCoursesTime = 0;
-		Date currentDate = new Date();
-		for (Course c : CourseRepository.findAll()) {
-			long dit = currentDate.getTime() - c.getStartDateTime().getTime();
-			long did = (dit / (1000 * 60 * 60 * 24)) % 365; // difference in days
-			if (did <= 28) {
-				// calculate totalcourses time
-				long difference_In_Time = c.getFinishDateTime().getTime() - c.getStartDateTime().getTime();
-				long difference_In_Days = (difference_In_Time / (1000 * 60 * 60 * 24)) % 365;
-				int numberOfMeetings = (int) (difference_In_Days / 7);
-				totalCoursesTime += numberOfMeetings * c.getMeetingDuration();
-			}
-		}
-		//// now in the last 28 days get the meetings that occured
-		double totalMeetingsDurations = 0;
-		for (Meeting m : meetingRepository.findAll()) {
-			Date meetingDate = m.getMeetingDateTime();
-			long differenceInTime = currentDate.getTime() - meetingDate.getTime();
-			long differenceInDays = (differenceInTime / (1000 * 60 * 60 * 24)) % 365;
-			if (differenceInDays <= 28) {
-				String courseId = m.getCourseId();
-				Course c = getASpecificCourse(courseId);
-				totalMeetingsDurations += c.getMeetingDuration();
-			}
-		}
-		return totalMeetingsDurations / totalCoursesTime;
+	public Course getASpecificCourseByName(String courseName) {
+
+		for ( Course c :getAllCourses())
+			if(c.getName().equals(courseName)) 
+				return c;
+		return null;
 	}
 
 }

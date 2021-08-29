@@ -2,16 +2,21 @@ package com.example.demo.pckg1;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 
 
@@ -26,12 +31,23 @@ IkidRepository kidRepo;
 CourseRepository courseRepo;
 @Autowired
 CategoryRepository categoryRepo;
-
+long DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 /**
  * 
  * @return list of all kids
  */
+
+public void setActiveDate(String kidId,Date newActiveDate) {
+	Optional<Kid> optional = kidRepo.findById(kidId);
+	if(optional.isPresent()) {
+		System.out.println("Kid Found, now setting course to his studies.");
+		Kid kid = optional.get();
+		kid.setActiveDate(newActiveDate);
+		kidRepo.save(kid);
+	}
+}
+
 public List<Kid> retrieveAllKids(){
 	return kidRepo.findAll();
 }
@@ -43,6 +59,7 @@ public List<Kid> retrieveAllKids(){
  */
 public Kid addNewKid(Kid kid) {
 	kid.setStatus(Status.Active);
+	kid.setActiveDate(new Date());
 	kidRepo.save(kid);
 	return kid;
 }
@@ -54,6 +71,7 @@ public Kid addNewKid(Kid kid) {
  */
 public List<Kid> addKid(Kid kid){
 	kid.setStatus(Status.Active);
+	kid.setActiveDate(new Date());
 	kidRepo.save(kid);
 	return kidRepo.findAll();
 }
@@ -182,7 +200,7 @@ public ArrayList<String> addCourseToCompleteCourses(String kidId, String courseI
 	return null;
 }
 
-/***
+/*
  * 
  * @param kidId to get kid's coures
  * @return arrayList of all kid's courses
@@ -213,6 +231,9 @@ public boolean deleteKid(String kidId) {
 		if(kid.getStatus().equals(Status.Active)) {
 			kid.setStatus(Status.InActive);
 			kidRepo.save(kid);
+			for(String course : optional.get().getActiveCourses()) {
+				removeCourseFromKid(kidId, course);
+			}
 			System.out.println("Status changed to Inactive");
 			return true;
 		}else {
@@ -225,7 +246,7 @@ public boolean deleteKid(String kidId) {
 }
 
 
-/***
+/*
  * 
  * @param kidId to get active courses of
  * @return list of course's IDs
@@ -251,7 +272,7 @@ public ArrayList<Course> getKidActiveCourses( String kidId){
 	return null;
 }
 
-/***
+/*
  * 
  * @param kidId to get active courses of
  * @return list of course's IDs
@@ -268,7 +289,7 @@ public ArrayList<String> getKidActiveCoursesIds(String kidId){
 }
 
 
-/***
+/*
  * 
  * @param kidId to get completed courses of
  * @return list of course's IDs
@@ -294,25 +315,42 @@ public ArrayList<Kid> getAllKids(){
 /**
  *  a method to get all new kids, new kid is considered a kid that has the active date
  *   is within the last month aka joined kidi a month ago or less.
+ *   @param period is the type of period you want to get new kids: 1- For week 2- For month 3- For year.
  * @return list of kids
  */
-public ArrayList<Kid> getNewKids(){
+public HashMap<String, Integer> getNewKids(int period){
+	if(period != 1 && period !=2 && period !=3) {
+		new ResponseEntity<>("Input: 1- For week 2- For month 3- For year.", HttpStatus.NOT_ACCEPTABLE);
+		return null;
+	}
+	Date d;
+	if(period == 1) {
+		d = new Date((new Date()).getTime()- 7*DAY_IN_MS);
+	}else if(period == 2) {
+		d = new Date((new Date()).getTime()-35*DAY_IN_MS);
+	}
+	else {
+		d = new Date((new Date()).getTime()- 365*DAY_IN_MS);
+	}
 	List<Kid> kids = kidRepo.findAll();
-	ArrayList<Kid> newKids = new ArrayList<Kid>();
 	if(kids.size()<1) {
 		System.out.println("No KIDS IN DATABASE MAN!!!");
 		return null;
 	}
-	Date current = new Date();
+	int kidsCount = 0;
+	int totalKids = 0;
 	for( Kid k : kids) {
-		long difference_In_Time = current.getTime() - k.getActiveDate().getTime();
-		long difference_In_Days = (difference_In_Time/ (1000 * 60 * 60 * 24))% 365;
-		if(difference_In_Days <=28) {
-			newKids.add(k);
+		if(  k.getStatus().equals(Status.Active)) {
+			totalKids++;
+			if(k.getActiveDate().after(d)) {
+				kidsCount++;
+			}
 		}
 	}
-	System.out.println("Returned list of new kids.");
-	return newKids;
+HashMap<String, Integer> toReturn = new HashMap<String, Integer>();
+toReturn.put("newKids", kidsCount);
+toReturn.put("totalKids",totalKids );
+	return toReturn;
 }
 
 /**
@@ -330,7 +368,23 @@ public ArrayList<Kid> getKids(ArrayList<String> idList){
 	}
 	return kids;
 }
-
+/**
+ * get all the categories that the kid is not currently participate in(active courses)   
+ * @param  id of kid 
+ * @return list of all categories that the kid is registered to(not active courses)
+ */
+public List<Category> getKidNotRegisteredCategories( String kidId){
+    List<Category> cats = new ArrayList<Category>();
+    Optional<Kid> kid = kidRepo.findById(kidId);
+    if (kid.isPresent()) {
+        for (Category cat: categoryRepo.getAllCategories()) {
+            if (getKidNotRegisteredCoursesByCategory(kidId, cat.getId()).isEmpty() == false) {
+                cats.add(cat);
+            }
+        }
+    }
+    return cats; 
+}
 
 
 /**
@@ -346,26 +400,44 @@ public List<Course> getKidNotRegisteredCoursesByCategory( String kidId, String c
 		return availibleCourses; }
 	return null; 
 }
+
 /**
  * 
- * @return kids count for every Category
+ * @param kid
+ * @return
  */
-public HashMap<String, Integer> getKidsByCategories(){
-	HashMap<String,Integer> toReturn =new HashMap<String, Integer>();
-	ArrayList<Category> categories = categoryRepo.getAllCategories();
-	for(Category c : categories) {
-		ArrayList<Course> categoryCourses = courseRepo.getCategoryCourses(c.getId());
-		for(Course course : categoryCourses) {
-			int courseKids = course.getKidsIDs().size();
-			if(!toReturn.containsKey(c.getName())) {
-				toReturn.put(c.getName(), courseKids);
-			}else {
-				toReturn.put(c.getName(), toReturn.get(c.getName())+courseKids);
-			}
+public List<Kid> createKid(Kid kid) {	
+	kid.setActiveDate(new Date());	
+	kid.setStatus(Status.Active);
+	kidRepo.save(kid);	
+	return kidRepo.findAll();	
+}
+
+
+public TreeMap<Integer,Integer> getKidsCategoryMonth(String categType){
+	HashMap<Integer, Integer> kidsCountByCategoryMonth = new HashMap<Integer,Integer>();
+	for(int i=0;i<12;i++) {
+		kidsCountByCategoryMonth.put(i, 0);
+	}
+	List<Kid> allKids = kidRepo.findAll();
+	for(int i=0;i<60;i++){
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(allKids.get(i).getActiveDate());
+		int num_kids = kidsCountByCategoryMonth.get(calendar.get(Calendar.MONTH));
+		String coursecateg = courseRepo.getASpecificCourse(allKids.get(i).getActiveCourses().get(0)).getCategoryId();
+		if(coursecateg.indexOf(categType)==0){
+			num_kids++;
 		}
+		kidsCountByCategoryMonth.put((calendar.get(Calendar.MONTH)), num_kids);			
 	}
 	
-	return toReturn;
+    TreeMap<Integer, Integer> sorted = new TreeMap<>();
+
+    sorted.putAll(kidsCountByCategoryMonth);
+    
+    
+     
+	return sorted;
 }
 
 
